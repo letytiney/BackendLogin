@@ -65,6 +65,7 @@ app.post("/create",(req, res)=>{
         }
     );
 });
+
 /*Consulta que se muestra en la tabla de empleados.  */
 app.get("/obtenerlistapersonas",(req,res)=>{
     db.query( "SELECT * FROM PERSONA", 
@@ -94,22 +95,6 @@ app.get("/obtenerpersona",(req,res)=>{
     }
     );
 });
-/*Este es para que cuando se crear un nuevo usuario este se pueda actualizar sin necesidad que el usuario recargue el nav */
-/*app.post("/agregarusuario", (req, res) => {
-    const { id_persona, id_usuario, rol_id, estado_id, username } = req.body; // Asegúrate de que el cuerpo de la solicitud contenga estos datos
-
-    db.query(`
-        INSERT INTO usuarios (id_persona, id_usuario) VALUES (?, ?)`,
-        [id_persona, id_usuario],
-        (err, result) => {
-            if (err) {
-                console.log(`Error al agregar usuario: ${err}`);
-                return res.status(500).send('Error al agregar usuario');
-            }
-            res.status(201).send('Usuario agregado correctamente');
-        }
-    );
-});*/ /*Borrar esto hoy 10-09-2024 ya no sirve */
 
 //Update
 app.put("/update",(req, res)=>{
@@ -233,38 +218,6 @@ app.post("/create-usuario", (req, res) => {
     });
 });
 
-/*
-
-app.post("/create-usuario", (req, res) => {
-    const { id_persona, rol_id, estado_id, username, password } = req.body;
-
-    // Verificar si el username ya existe
-    db.query('SELECT * FROM usuarios WHERE username = ?', [username], (err, result) => {
-        if (err) {
-            console.log(`Error al verificar el username: ${err}`);
-            return res.status(500).send("Error en el servidor");
-        }
-
-        // Si el username ya existe, enviar un mensaje de error
-        if (result.length > 0) {
-            return res.status(400).send({ message: "El nombre de usuario ya existe." });
-        }
-
-        // Si no existe, proceder a insertar el nuevo usuario
-        db.query('INSERT INTO usuarios(id_persona, rol_id, estado_id, username, password) VALUES(?, ?, ?, ?, ?)',
-            [id_persona, rol_id, estado_id, username, password],
-            (err, result) => {
-                if (err) {
-                    console.log(`Error al registrar el usuario: ${err}`);
-                    return res.status(500).send("Error al registrar el usuario");
-                } else {
-                    res.send("Usuario registrado con éxito");
-                }
-            }
-        );
-    });
-});*/
-
 app.get("/obteneruser",(req,res)=>{
     db.query("SELECT * FROM usuarios", 
     (err, result)=>{
@@ -277,33 +230,145 @@ app.get("/obteneruser",(req,res)=>{
     );
 });
 
-//Update
-/*
-app.put("/updateuser",(req, res)=>{
+
+//Tabla categorias_platillos
+//Guardar
+app.post("/categoria/guardar",(req, res)=>{
     console.log(req.body);
-    const id_usuario = req.body.id_usuario;
-    const id_persona = req.body.id_persona;
-    const rol_id = req.body.rol_id;
-    const estado_id = req.body.estado_id;
-    const username = req.body.username;
-    const password = req.body.password;
-    db.query('UPDATE usuarios SET id_persona=?, rol_id=?, estado_id=?, username=?, password=? WHERE id_usuario=?',
-    [id_persona, rol_id, estado_id, username, password, id_usuario],
+    const nombre = req.body.nombre;
+    db.query('INSERT INTO categorias_platillos(nombre) VALUES (?)',
+    [nombre],
     (err, result)=>{
-        if (err) {
-            console.log(`Usuario no actualizada: ${err}`);
-            res.status(500).send({ message: "Error al actualizar el usuario" });
-        } else {
-            res.send(result);
+        if(err){
+            console.log(`Error al guardar categoria${err}`);
+        }else{
+            res.send(`Categoria guardada exitosamente ${result}`);
         }
         }
     );
-});*/
+});
+//listar
+app.get("/categoria/listar",(req,res)=>{
+    db.query("SELECT * FROM categorias_platillos", 
+    (err, result)=>{
+        if(err){
+            console.log(`Error al mostrar categorias de platillos${err}`);
+            }else{
+                res.send(result);
+            }	
+    }
+    );
+});
+
+//Editar 
+app.put("/categoria/actualizar",(req, res)=>{
+    console.log(req.body);
+    const id = req.body.id;
+    const nombre = req.body.nombre;
+    db.query('UPDATE categorias_platillos SET nombre=? WHERE id=?',
+    [nombre, id],
+    (err, result)=>{
+        if(err){
+            console.log(`Error al actualizar${err}`);
+        }else{
+            res.send(`Categoria actualizada! ${result}`);
+        }
+        }
+    );
+});
+//eliminar
+app.delete("/categoria/eliminar/:id", (req, res) => {
+    const id = req.params.id;
+
+    // Primero, verificar si la categorias_platillos tiene platillos asociados
+    db.query('SELECT * FROM platillos WHERE categoria_id = ?', [id], (err, result) => {
+        if (err) {
+            console.log(`Error al eliminar categoria: ${err}`);
+            return res.status(500).send("Error en el servidor");
+        }
+        // Si hay platillos asociados, no permitir la eliminación
+        if (result.length > 0) {
+            return res.status(400).send({ message: "No se puede eliminar el porque tiene un platillo asociados." });
+        }
+        // Si no hay platillos asociados, proceder a eliminar la categoria
+        db.query('DELETE FROM categorias_platillos WHERE id = ?', [id], (err, result) => {
+            if (err) {
+                console.log(`Categoria no eliminada: ${err}`);
+                return res.status(500).send("Error al eliminar la persona");
+            } else {
+                res.send({ message: "Categoria eliminada con éxito", result });
+            }
+        });
+    });
+});
 
 
+//Tabla platillos
+//Guardar
+app.post("/platillos/guardar",(req, res)=>{
+    console.log(req.body);
+    const nombre = req.body.nombre;
+    const descripcion = req.body.descripcion;
+    const categoria_id = req.body.categoria_id;
+    const precio = req.body.precio;
+    db.query('INSERT INTO platillos(nombre, descripcion, categoria_id, precio) VALUES (?, ?, ?, ?)',
+    [nombre, descripcion, categoria_id, precio],
+    (err, result)=>{
+        if(err){
+            console.log(`Error al guardar platillo${err}`);
+        }else{
+            res.send(`Platillo guardada exitosamente ${result}`);
+        }
+        }
+    );
+});
+//listar
+app.get("/platillos/listar",(req,res)=>{
+    db.query("SELECT * FROM platillos", 
+    (err, result)=>{
+        if(err){
+            console.log(`Error al mostrar platillos${err}`);
+            }else{
+                res.send(result);
+            }	
+    }
+    );
+});
+
+//Editar 
+app.put("/platillos/actualizar",(req, res)=>{
+    console.log(req.body);
+    const id = req.body.id;
+    const nombre = req.body.nombre;
+    const descripcion = req.body.descripcion;
+    const categoria_id = req.body.categoria_id;
+    const precio = req.body.precio;
+    db.query('UPDATE platillos SET nombre=?, descripcion=?, categoria_id=?, precio=? WHERE id=?',
+    [nombre, descripcion, categoria_id, precio, id],
+    (err, result)=>{
+        if(err){
+            console.log(`Error al actualizar${err}`);
+        }else{
+            res.send(`Platillo actualizado! ${result}`);
+        }
+        }
+    );
+});
+
+//eliminar
+app.delete("/platillos/eliminar/:id", (req, res) => {
+    const id = req.params.id;
+        db.query('DELETE FROM platillos WHERE id = ?', [id], (err, result) => {
+            if (err) {
+                console.log(`Platillo no eliminada: ${err}`);
+                return res.status(500).send("Error al eliminar la persona");
+            } else {
+                res.send({ message: "Platillo eliminada con éxito", result });
+            }
+        });
+});
 
 
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en http://localhost:${PORT}`);
-  //console.log(Servidor escuchando en http://localhost:3001);
 });
