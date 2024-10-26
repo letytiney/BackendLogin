@@ -46,7 +46,7 @@ router.put("/actualizar",(req, res)=>{
     [nombre, descripcion, categoria_id, precio, imagen, id],
     (err, result)=>{
         if(err){
-            console.log(`Error al actualizar${err}`);
+            console.log(`Error al actualizar ${err}`);
         }else{
             res.send(`Platillo actualizado! ${result}`);
         }
