@@ -8,8 +8,9 @@ router.post("/guardar",(req, res)=>{
     const descripcion = req.body.descripcion;
     const categoria_id = req.body.categoria_id;
     const precio = req.body.precio;
-    db.query('INSERT INTO platillos(nombre, descripcion, categoria_id, precio) VALUES (?, ?, ?, ?)',
-    [nombre, descripcion, categoria_id, precio],
+    const imagen = req.body.imagen;
+    db.query('INSERT INTO platillos(nombre, descripcion, categoria_id, precio, imagen) VALUES (?, ?, ?, ?, ?)',
+    [nombre, descripcion, categoria_id, precio, imagen],
     (err, result)=>{
         if(err){
             console.log(`Error al guardar platillo${err}`);
@@ -40,8 +41,9 @@ router.put("/actualizar",(req, res)=>{
     const descripcion = req.body.descripcion;
     const categoria_id = req.body.categoria_id;
     const precio = req.body.precio;
-    db.query('UPDATE platillos SET nombre=?, descripcion=?, categoria_id=?, precio=? WHERE id=?',
-    [nombre, descripcion, categoria_id, precio, id],
+    const imagen = req.body.imagen;
+    db.query('UPDATE platillos SET nombre=?, descripcion=?, categoria_id=?, precio=? imagen=?, WHERE id=?',
+    [nombre, descripcion, categoria_id, precio, imagen, id],
     (err, result)=>{
         if(err){
             console.log(`Error al actualizar${err}`);
