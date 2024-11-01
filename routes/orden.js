@@ -18,16 +18,66 @@ router.get("/listar",(req,res)=>{
 
 router.post ("/guardar",(req, res)=>{
     console.log(req.body);
-    const { id_usuario, mesa_id, fecha_orden, total } = req.body;
+    const {id_usuario, mesa_id} = req.body;
+    const total = 0;
+    const estado = 'pendiente';
 
-    db.query('INSERT INTO ordenes(id_usuario, mesa_id, fecha_orden, total) VALUES (?, ?, ?, ?)',
-    [id_usuario, mesa_id, fecha_orden, total],
+    db.query('INSERT INTO ordenes(id_usuario, mesa_id, fecha_orden, total, estado) VALUES (?, ?,  NOW(), ?, ?)',
+    [id_usuario, mesa_id, total, estado],
     (err, result)=>{
         if(err){
             console.log(`Error al crear orden${err}`);
             return res.status(500).send('Error al crear orden');
         }
         res.status(201).json({ message: `Orden creada exitosamente`, orderId: result.insertId });
+        }
+    );
+});
+//Post para cambio de estado
+/*
+router.post("/enviar-orden/:id", (req, res) => {
+    const ordenId = req.params.id;
+    db.query(
+        'UPDATE ordenes SET estado = "preparando" WHERE id = ?',
+        [ordenId],
+        (err, result) => {
+            if (err) {
+                console.log(`Error al enviar orden: ${err}`);
+                return res.status(500).send('Error al enviar orden');
+            }
+
+            res.status(200).json({
+                message: 'Orden enviada exitosamente',
+                ordenId: ordenId,
+                estado: 'preparando'
+            });
+        }
+    );
+});*/
+
+//Ejemplo usando Socket aun no probado
+router.post("/enviar-orden/:id", (req, res) => {
+    const ordenId = req.params.id;
+    db.query(
+        'UPDATE ordenes SET estado = "preparando" WHERE id = ?',
+        [ordenId],
+        (err, result) => {
+            if (err) {
+                console.log(`Error al enviar orden: ${err}`);
+                return res.status(500).send('Error al enviar orden');
+            }
+
+            // Emitir evento a los clientes conectados
+            io.emit('ordenActualizada', {
+                ordenId: ordenId,
+                estado: 'preparando'
+            });
+
+            res.status(200).json({
+                message: 'Orden enviada exitosamente',
+                ordenId: ordenId,
+                estado: 'preparando'
+            });
         }
     );
 });

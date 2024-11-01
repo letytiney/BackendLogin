@@ -17,6 +17,9 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const PORT = process.env.PORT || 3001;
 const authRoutes = require('./routes/auth'); 
 const roleMiddleware = require('./middleware/roleMiddleware');
+//Socket para envio de ordenes en tiempo real
+const socketIo = require('socket.io');
+const io = socketIo(server); // Inicializa Socket.IO
 
 app.use(cors({
     origin: FRONTEND_URL,
