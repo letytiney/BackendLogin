@@ -43,7 +43,8 @@ router.put("/actualizar",(req, res)=>{
         if(err){
             console.log(`Error al actualizar${err}`);
         }else{
-            res.send(`Categoria actualizada! ${result}`);
+            res.status(200).send(result);
+            /*res.send(`Categoria actualizada! ${result}`);*/
         }
         }
     );
@@ -60,7 +61,7 @@ router.delete("/eliminar/:id", (req, res) => {
         }
         // Si hay platillos asociados, no permitir la eliminación
         if (result.length > 0) {
-            return res.status(400).send({ message: "No se puede eliminar el porque tiene un platillo asociados." });
+            return res.status(400).send("No se puede eliminar el porque tiene un platillo asociados.");
         }
         // Si no hay platillos asociados, proceder a eliminar la categoria
         db.query('DELETE FROM categorias_platillos WHERE id = ?', [id], (err, result) => {
@@ -68,7 +69,7 @@ router.delete("/eliminar/:id", (req, res) => {
                 console.log(`Categoria no eliminada: ${err}`);
                 return res.status(500).send("Error al eliminar la persona");
             } else {
-                res.send({ message: "Categoria eliminada con éxito", result });
+                res.status(200).send(result);
             }
         });
     });
