@@ -44,5 +44,49 @@ router.get("/obteneruser", async (req, res) => {
     }
 });
 
+router.put("/actualizar/:id", async (req, res) => {
+    const userId = req.params.id; // ID del usuario a actualizar
+    const { id_persona, rol_id, estado_id, username, password } = req.body;
+
+    try {
+        // Verificar si el usuario existe
+        const [existingUser] = await pool.query('SELECT * FROM usuarios WHERE id_usuario = ?', [userId]);
+
+        if (existingUser.length === 0) {
+            return res.status(404).send("Usuario no encontrado.");
+        }
+
+        // Si se proporciona una nueva contraseña, encriptarla
+        let hashedPassword;
+        if (password) {
+            const saltRounds = 10; // Número de rondas para el salt
+            hashedPassword = await bcrypt.hash(password, saltRounds);
+        }
+
+        // Actualizar los campos del usuario
+        const query = `
+            UPDATE usuarios 
+            SET 
+                id_persona = ?, 
+                rol_id = ?, 
+                estado_id = ?, 
+                username = ?${hashedPassword ? ', password = ?' : ''} 
+            WHERE id_usuario = ?
+        `;
+
+        const params = [id_persona, rol_id, estado_id, username];
+        if (hashedPassword) {
+            params.push(hashedPassword); // Agregar la contraseña hasheada si se proporciona
+        }
+        params.push(userId); // ID del usuario al final
+
+        await pool.query(query, params);
+
+        res.status(200).send(`Usuario actualizado exitosamente.`);
+    } catch (err) {
+        console.error(`Error al actualizar usuario: ${err}`);
+        res.status(500).send(`Error del servidor ${err}`);
+    }
+});
 
 module.exports = router;

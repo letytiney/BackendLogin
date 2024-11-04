@@ -64,25 +64,14 @@ router.put("/update", async (req, res) => {
 
         // Verificar si se actualizó algún registro
         if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Persona no encontrada'
-            });
+            return res.status(404).send('Persona no encontrada');
         }
 
         // Enviar respuesta con el resultado de la actualización
-        res.status(200).json({
-            success: true,
-            message: 'Persona actualizada exitosamente',
-            data: result
-        });
+        res.status(200).send("Persona actualizada con éxito.");
     } catch (err) {
         console.error(`Error al actualizar persona: ${err}`);
-        res.status(500).json({
-            success: false,
-            message: 'Error al actualizar la persona',
-            error: err.message
-        });
+        res.status(500).send("Error en el servidor");
     }
 });
 

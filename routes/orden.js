@@ -28,7 +28,7 @@ router.post("/guardar", async (req, res) => {
         const [result] = await pool.query(query, [id_usuario, mesa_id, total, estado]);
         
         // Enviar respuesta con el resultado de la inserción
-        res.status(201).send(`Orden guardada exitosamente con ID: ${result.insertId}`);
+        res.status(201).json({ ordenId: result.insertId }); // Enviar el ID de la orden en formato JSON
     } catch (err) {
         console.error(`Error al crear orden: ${err}`);
         res.status(500).send("Error del servidor");
@@ -46,10 +46,7 @@ router.post("/enviar-orden/:id", async (req, res) => {
 
         // Verificar si se actualizó algún registro
         if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'Orden no encontrada'
-            });
+            return res.status(404).send('Orden no encontrada');
         }
 
         // Enviar respuesta con el resultado de la actualización
@@ -61,15 +58,12 @@ router.post("/enviar-orden/:id", async (req, res) => {
         });
     } catch (err) {
         console.error(`Error al enviar orden: ${err}`);
-        res.status(500).json({
-            success: false,
-            message: 'Error al enviar orden',
-            error: err.message
-        });
+        res.status(500).send("Error al enviar orden");
     }
 });
 
 //Ejemplo usando Socket aun no probado
+/*
 router.post("/enviar-orden/:id", (req, res) => {
     const ordenId = req.params.id;
     db.query(
@@ -95,5 +89,6 @@ router.post("/enviar-orden/:id", (req, res) => {
         }
     );
 });
+*/
 
 module.exports = router;

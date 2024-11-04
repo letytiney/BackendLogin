@@ -57,7 +57,7 @@ router.post("/guardar", async (req, res) => {
     } 
     catch (error) {
         console.error(`Error al guardar mesa: ${error}`); 
-        res.status(500).send(errorMessage);
+        res.status(500).send("Error al guardar detalle");
     }
 });
 
@@ -125,7 +125,7 @@ router.put("/actualizar/:id", async (req, res) => {
     }
 });
 
-// no funciona aun
+//Eliminar detalle_orden
 router.delete("/eliminar/:id", async (req, res) => {
     const id = req.params.id;
     
