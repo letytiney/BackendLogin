@@ -1,138 +1,212 @@
 const express = require('express')
-const db = require('../config/db'); //importamos la bd
+const pool = require('../config/db');
 const router = express.Router();
 
+router.get("/listar", async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
 
-router.get("/listar",(req,res)=>{
-    db.query("SELECT * FROM detalles_orden", 
-    (err, result)=>{
-        if(err){
-            console.log(`Error al mostrar detalle de ordenes${err}`);
-            return res.status(500).send('Error al mostrar detalle de ordenes');
-            }else{
-                res.status(200).json(result);
-            }	
+        const [result] = await connection.query("SELECT * FROM detalles_orden");
+
+        res.status(200).json(result);
+    } catch (err) {
+        console.log(`Error al mostrar detalle de ordenes: ${err}`);
+        res.status(500).send('Error al mostrar detalle de ordenes');
     }
-    );
+    finally {
+        if (connection) connection.release(); // Liberar la conexión
+    }
 });
 
-/*router.post ("/guardar",(req, res)=>{
-    console.log(req.body);
-    const { orden_id, platillo_id, cantidad} = req.body;
+router.post("/guardar", async (req, res) => {
+    const connection = await pool.getConnection(); 
+    try {
+        await connection.beginTransaction();
+        
+        const { orden_id, platillo_id, cantidad } = req.body;
+        console.log(req.body);
 
-    db.query('INSERT INTO detalles_orden(orden_id, platillo_id, cantidad) VALUES (?, ?, ?)',
-    [orden_id, platillo_id, cantidad],
-    (err, result)=>{
-        if(err){
-            console.log(`Error al crear detalle orden${err}`);
-            return res.status(500).send('Error al crear detalle orden');
+        // Obtener precio del platillo
+        const [platilloResult] = await connection.query(
+            'SELECT precio FROM platillos WHERE id = ?',
+            [platillo_id]
+        );
+
+        if (platilloResult.length === 0) {
+            throw new Error('Platillo no encontrado');
         }
-        res.status(201).json({ message: `Detalle orden creada exitosamente`, orderId: result.insertId });
-        }
-    );
-});*/
-// detallesOrdenRoutes.js
-router.post("/guardar", (req, res) => {
-    console.log(req.body);
-    const { orden_id, platillo_id, cantidad } = req.body;
 
-    // Insertamos el detalle de la orden
-    db.query(
-        'INSERT INTO detalles_orden(orden_id, platillo_id, cantidad) VALUES (?, ?, ?)',
-        [orden_id, platillo_id, cantidad],
-        (err, result) => {
-            if (err) {
-                console.log(`Error al crear detalle orden: ${err}`);
-                return res.status(500).send('Error al crear detalle orden');
-            }
+        const precio = platilloResult[0].precio;
+        const subtotal = precio * cantidad;
 
-            // Calculamos el total sumando todos los subtotales
-            db.query(
-                'SELECT SUM(subtotal) as total FROM detalles_orden WHERE orden_id = ?',
-                [orden_id],
-                (err, totalResult) => {
-                    if (err) {
-                        console.log(`Error al calcular total: ${err}`);
-                        return res.status(500).send('Error al calcular total');
-                    }
+       // Insertar detalle de orden
+        const [detalleResult] = await connection.query(
+            'INSERT INTO detalles_orden(orden_id, platillo_id, cantidad, subtotal) VALUES (?, ?, ?, ?)',
+            [orden_id, platillo_id, cantidad, subtotal]
+        );
 
-                    const nuevoTotal = totalResult[0].total || 0;
+        // Calcular nuevo total
+        const [totalResult] = await connection.query(
+            'SELECT COALESCE(SUM(subtotal), 0) as total FROM detalles_orden WHERE orden_id = ?',
+            [orden_id]
+        );
 
-                    // Actualizamos el total y estado de la orden
-                    db.query(
-                        'UPDATE ordenes SET total = ? WHERE id = ?',
-                        [nuevoTotal, orden_id],
-                        (err, updateResult) => {
-                            if (err) {
-                                console.log(`Error al actualizar orden: ${err}`);
-                                return res.status(500).send('Error al actualizar orden');
-                            }
+        const nuevoTotal = totalResult[0].total;
 
-                            res.status(201).json({
-                                message: 'Detalle orden creada exitosamente',
-                                detalleId: result.insertId,
-                                ordenId: orden_id,
-                                nuevoTotal: nuevoTotal,
-                            });
-                        }
-                    );
-                }
-            );
-        }
-    );
+        // Actualizar total de la orden
+        await connection.query(
+            'UPDATE ordenes SET total = ? WHERE id = ?',
+            [nuevoTotal, orden_id]
+        );
+
+        await connection.commit();
+
+        res.status(201).json({
+            message: 'Detalle orden creada exitosamente',
+            detalleId: detalleResult.insertId,
+            ordenId: orden_id,
+            subtotal: subtotal,
+            nuevoTotal: nuevoTotal
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error:', error);
+        
+        const errorMessage =
+            error.message === 'Platillo no encontrado' 
+                ? 'Platillo no encontrado' 
+                : 'Error al crear detalle orden';
+        
+        res.status(500).send(errorMessage);
+    } finally {
+        connection.release(); // Libera la conexión al pool
+    }
 });
 
-router.post("/enviar-orden/:id", (req, res) => {
-    const ordenId = req.params.id;
+router.put("/actualizar/:id", async (req, res) => {
+    const detalleId = req.params.id;
+    const { cantidad } = req.body;
+
+    try {
+        // Primero obtenemos el platillo_id y orden_id del detalle
+        const [detalleResult] = await pool.query(
+            'SELECT platillo_id, orden_id FROM detalles_orden WHERE id = ?',
+            [detalleId]
+        );
+
+        if (detalleResult.length === 0) {
+            return res.status(404).send('Detalle no encontrado');
+        }
+
+        const { platillo_id, orden_id } = detalleResult[0];
+
+        // Obtenemos el precio del platillo
+        const [platilloResult] = await pool.query(
+            'SELECT precio FROM platillos WHERE id = ?',
+            [platillo_id]
+        );
+
+        if (platilloResult.length === 0) {
+            return res.status(404).send('Platillo no encontrado');
+        }
+
+        const precio = platilloResult[0].precio;
+        const subtotal = precio * cantidad;
+
+        // Actualizamos el detalle con la nueva cantidad y subtotal
+        await pool.query(
+            'UPDATE detalles_orden SET cantidad = ?, subtotal = ? WHERE id = ?',
+            [cantidad, subtotal, detalleId]
+        );
+
+        // Recalculamos el total de la orden
+        const [totalResult] = await pool.query(
+            'SELECT SUM(subtotal) as total FROM detalles_orden WHERE orden_id = ?',
+            [orden_id]
+        );
+
+        const nuevoTotal = totalResult[0].total || 0;
+
+        // Actualizamos el total de la orden
+        await pool.query(
+            'UPDATE ordenes SET total = ? WHERE id = ?',
+            [nuevoTotal, orden_id]
+        );
+
+        res.json({
+            message: 'Detalle orden actualizado exitosamente',
+            detalleId: detalleId,
+            nuevaCantidad: cantidad,
+            nuevoSubtotal: subtotal,
+            nuevoTotal: nuevoTotal
+        });
+
+    } catch (err) {
+        console.error(`Error al actualizar detalle: ${err}`);
+        res.status(500).send('Error al actualizar detalle');
+    }
+});
+
+// no funciona aun
+router.delete("/eliminar/:id", async (req, res) => {
+    const id = req.params.id;
     
-    // Actualizamos solo el estado
-    db.query(
-        'UPDATE ordenes SET estado = "preparando" WHERE id = ?',
-        [ordenId],
-        (err, result) => {
-            if (err) {
-                console.log(`Error al enviar orden: ${err}`);
-                return res.status(500).send('Error al enviar orden');
-            }
+    try {
+        // 1. Obtener el orden_id antes de eliminar
+        const [detalleResult] = await pool.query(
+            'SELECT orden_id FROM detalles_orden WHERE id = ?',
+            [id]
+        );
 
-            res.status(200).json({
-                message: 'Orden enviada exitosamente',
-                ordenId: ordenId,
-                estado: 'preparando'
+        if (!detalleResult || detalleResult.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Detalle de orden no encontrado"
             });
         }
-    );
-});
 
-//Editar //pendiente logica si usar patch
-router.put("/actualizar",(req, res)=>{
-    console.log(req.body);
-    const { id, orden_id, platillo_id, cantidad} = req.body;
-    db.query('UPDATE detalles_orden SET orden_id=?, platillo_id=?, cantidad=? WHERE id=?',
-    [orden_id, platillo_id, cantidad, id],
-    (err, result)=>{
-        if(err){
-            console.log(`Error al actualizar detalle orden${err}`);
-        }else{
-            res.send(`Detalle orden actualizado! ${result}`);
-        }
-        }
-    );
-});
+        const orden_id = detalleResult[0].orden_id;
 
-//eliminar
-router.delete("/eliminar/:id", (req, res) => {
-    const id = req.params.id;
-        db.query('DELETE FROM detalles_orden WHERE id = ?', [id], (err, result) => {
-            if (err) {
-                console.log(`Detalle orden no eliminada: ${err}`);
-                return res.status(500).send("Error al eliminar detalle orden");
-            } else {
-                res.send({ message: "Detalle orden eliminada con éxito", result });
+        // 2. Eliminar el detalle
+        await pool.query(
+            'DELETE FROM detalles_orden WHERE id = ?',
+            [id]
+        );
+
+        // 3. Recalcular el total
+        const [totalResult] = await pool.query(
+            'SELECT COALESCE(SUM(subtotal), 0) as total FROM detalles_orden WHERE orden_id = ?',
+            [orden_id]
+        );
+
+        const nuevoTotal = totalResult[0].total;
+
+        // 4. Actualizar el total en la orden
+        await pool.query(
+            'UPDATE ordenes SET total = ? WHERE id = ?',
+            [nuevoTotal, orden_id]
+        );
+
+        // 5. Enviar respuesta exitosa
+        res.status(200).json({
+            success: true,
+            message: "Detalle de orden eliminado con éxito",
+            data: {
+                detalleId: id,
+                ordenId: orden_id,
+                nuevoTotal: nuevoTotal
             }
         });
+
+    } catch (error) {
+        console.error('Error en la eliminación del detalle:', error);
+        res.status(500).json({
+            success: false,
+            message: "Error al procesar la solicitud",
+            error: error.message
+        });
+    }
 });
-
-
 
 module.exports = router;

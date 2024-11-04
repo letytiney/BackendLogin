@@ -1,17 +1,26 @@
 const express = require('express')
-const db = require('../config/db'); //importamos la bd
+const pool = require('../config/db'); //importamos la bd
 const router = express.Router();
 
-router.get("/obtenerrol",(req,res)=>{
-    db.query("SELECT  id_rol, nombre FROM rol", 
-    (err, result)=>{
-        if(err){
-            console.log(`Test de error rol${err}`);
-            }else{
-                res.send(result);
-            }	
+router.get("/obtenerrol", async (req, res) => {
+    try {
+        // Ejecutamos la consulta usando async/await
+        const [result] = await pool.query("SELECT id_rol, nombre FROM rol");
+        
+        // Enviar respuesta con los resultados
+        res.status(200).json({
+            success: true,
+            data: result,
+            count: result.length
+        });
+    } catch (error) {
+        console.error(`Error al obtener roles: ${error}`);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener la lista de roles',
+            error: error.message
+        });
     }
-    );
 });
 
 module.exports = router;

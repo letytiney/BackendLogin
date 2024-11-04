@@ -13,13 +13,21 @@ const personaRoutes = require('./routes/persona.js');
 const autorizacion = require('./routes/auth.js');
 require('dotenv').config();
 const app = express();
+const http = require('http'); 
+//Socket para envio de ordenes en tiempo real
+const socketIo = require('socket.io');
+//const io = socketIo(server); // Inicializa Socket.IO
+
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const PORT = process.env.PORT || 3001;
 const authRoutes = require('./routes/auth'); 
 const roleMiddleware = require('./middleware/roleMiddleware');
-//Socket para envio de ordenes en tiempo real
-const socketIo = require('socket.io');
-const io = socketIo(server); // Inicializa Socket.IO
+
+// Crear un servidor HTTP
+const server = http.createServer(app); // Crear el servidor con la aplicación Express
+// Inicializa Socket.IO
+const io = socketIo(server);
+
 
 app.use(cors({
     origin: FRONTEND_URL,
@@ -62,4 +70,14 @@ app.use('/detalle_orden', detalleOrdenRoutes);
 
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en http://localhost:${PORT}`);
+});
+
+io.on('connection', (socket) => {
+    console.log('Nuevo cliente conectado');
+
+    // Manejar eventos aquí
+
+    socket.on('disconnect', () => {
+        console.log('Cliente desconectado');
+    });
 });

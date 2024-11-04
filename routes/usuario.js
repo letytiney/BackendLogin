@@ -1,82 +1,54 @@
 const express = require('express')
-const db = require('../config/db'); //importamos la bd
+const pool = require('../config/db'); //importamos la bd
 const router = express.Router();
 const bcrypt = require('bcrypt');
 
-router.post("/create-usuario", (req, res) => {
+router.post("/create-usuario", async (req, res) => {
     const { id_persona, rol_id, estado_id, username, password } = req.body;
-    // Verificar si el username ya existe
-    db.query('SELECT * FROM usuarios WHERE username = ?', [username], (err, result) => {
-        if (err) {
-            console.log(`Error al verificar el username: ${err}`);
-            return res.status(500).send("Error en el servidor");
-        }
+
+    try {
+        // Verificar si el username ya existe
+        const [existingUser] = await pool.query('SELECT * FROM usuarios WHERE username = ?', [username]);
+
         // Si el username ya existe, enviar un mensaje de error
-        if (result.length > 0) {
-            return res.status(400).send({ message: "El nombre de usuario ya existe." });
+        if (existingUser.length > 0) {
+            return res.status(400).json({ message: "El nombre de usuario ya existe." });
         }
+
         // Si no existe, encriptar la contraseña antes de insertar el usuario
         const saltRounds = 10; // Número de rondas para el salt
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-        bcrypt.hash(password, saltRounds, (err, hashedPassword) => {
-            if (err) {
-                console.log(`Error al encriptar la contraseña: ${err}`);
-                return res.status(500).send("Error en el servidor al encriptar la contraseña");
-            }
+        // Insertar el nuevo usuario con la contraseña encriptada
+        const [result] = await pool.query('INSERT INTO usuarios(id_persona, rol_id, estado_id, username, password) VALUES(?, ?, ?, ?, ?)',
+            [id_persona, rol_id, estado_id, username, hashedPassword]);
 
-            // Insertar el nuevo usuario con la contraseña encriptada
-            db.query('INSERT INTO usuarios(id_persona, rol_id, estado_id, username, password) VALUES(?, ?, ?, ?, ?)',
-                [id_persona, rol_id, estado_id, username, hashedPassword],
-                (err, result) => {
-                    if (err) {
-                        console.log(`Error al registrar el usuario: ${err}`);
-                        return res.status(500).send("Error al registrar el usuario");
-                    } else {
-                        res.send("Usuario registrado con éxito");
-                    }
-                }
-            );
-        });
-    });
-});
-
-router.get("/obteneruser",(req,res)=>{
-    db.query("SELECT * FROM usuarios", 
-    (err, result)=>{
-        if(err){
-            console.log(`Test de error Usuarios${err}`);
-            }else{
-                res.send(result);
-            }	
+        res.status(201).json({ message: "Usuario registrado con éxito", userId: result.insertId });
+    } catch (err) {
+        console.error(`Error al crear usuario: ${err}`);
+        res.status(500).json({ message: "Error en el servidor", error: err.message });
     }
-    );
 });
 
-router.delete("/delete/:id", (req, res) => {
-    const id = req.params.id;
-
-    // Primero, verificar si la persona tiene usuarios asociados
-    db.query('SELECT * FROM usuarios WHERE id_persona = ?', [id], (err, result) => {
-        if (err) {
-            console.log(`Error al verificar usuarios: ${err}`);
-            return res.status(500).send("Error en el servidor");
-        }
-
-        // Si hay usuarios asociados, no permitir la eliminación
-        if (result.length > 0) {
-            return res.status(400).send({ message: "No se puede eliminar el porque tiene un usuario asociados." });
-        }
-
-        // Si no hay usuarios asociados, proceder a eliminar la persona
-        db.query('DELETE FROM persona WHERE id = ?', [id], (err, result) => {
-            if (err) {
-                console.log(`Persona no eliminada: ${err}`);
-                return res.status(500).send("Error al eliminar la persona");
-            } else {
-                res.send({ message: "Persona eliminada con éxito", result });
-            }
+router.get("/obteneruser", async (req, res) => {
+    try {
+        // Ejecutamos la consulta usando async/await
+        const [result] = await pool.query("SELECT * FROM usuarios");
+        
+        // Enviar respuesta con los resultados
+        res.status(200).json({
+            success: true,
+            data: result,
+            count: result.length
         });
-    });
+    } catch (error) {
+        console.error(`Error al obtener usuarios: ${error}`);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener la lista de usuarios',
+            error: error.message
+        });
+    }
 });
 
 

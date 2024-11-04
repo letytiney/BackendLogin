@@ -1,59 +1,85 @@
 const express = require('express')
-const db = require('../config/db'); //importamos la bd
+const pool = require('../config/db'); //importamos la bd
 const router = express.Router();
 
 
-router.get("/listar",(req,res)=>{
-    db.query("SELECT * FROM ordenes", 
-    (err, result)=>{
-        if(err){
-            console.log(`Error al mostrar ordenes${err}`);
-            return res.status(500).send('Error al mostrar mesas');
-            }else{
-                res.status(200).json(result);
-            }	
+router.get("/listar", async (req, res) => {
+    try {
+        // Ejecutamos la consulta usando async/await
+        const [result] = await pool.query("SELECT * FROM ordenes");
+        
+        // Enviar respuesta con los resultados
+        res.status(200).json(result);
+    } catch (error) {
+        console.error(`Error al mostrar órdenes: ${error}`);
+        res.status(500).json({
+            success: false,
+            message: 'Error al mostrar órdenes',
+            error: error.message
+        });
     }
-    );
 });
 
-router.post ("/guardar",(req, res)=>{
+router.post("/guardar", async (req, res) => {
     console.log(req.body);
-    const {id_usuario, mesa_id} = req.body;
+    const { id_usuario, mesa_id } = req.body;
     const total = 0;
     const estado = 'pendiente';
 
-    db.query('INSERT INTO ordenes(id_usuario, mesa_id, fecha_orden, total, estado) VALUES (?, ?,  NOW(), ?, ?)',
-    [id_usuario, mesa_id, total, estado],
-    (err, result)=>{
-        if(err){
-            console.log(`Error al crear orden${err}`);
-            return res.status(500).send('Error al crear orden');
-        }
-        res.status(201).json({ message: `Orden creada exitosamente`, orderId: result.insertId });
-        }
-    );
-});
-//Post para cambio de estado
-/*
-router.post("/enviar-orden/:id", (req, res) => {
-    const ordenId = req.params.id;
-    db.query(
-        'UPDATE ordenes SET estado = "preparando" WHERE id = ?',
-        [ordenId],
-        (err, result) => {
-            if (err) {
-                console.log(`Error al enviar orden: ${err}`);
-                return res.status(500).send('Error al enviar orden');
-            }
+    const query = 'INSERT INTO ordenes(id_usuario, mesa_id, fecha_orden, total, estado) VALUES (?, ?, NOW(), ?, ?)';
 
-            res.status(200).json({
-                message: 'Orden enviada exitosamente',
-                ordenId: ordenId,
-                estado: 'preparando'
+    try {
+        // Ejecutar la consulta usando async/await
+        const [result] = await pool.query(query, [id_usuario, mesa_id, total, estado]);
+        
+        // Enviar respuesta con el resultado de la inserción
+        res.status(201).json({ 
+            message: 'Orden creada exitosamente', 
+            orderId: result.insertId 
+        });
+    } catch (err) {
+        console.error(`Error al crear orden: ${err}`);
+        res.status(500).json({
+            success: false,
+            message: 'Error al crear orden',
+            error: err.message
+        });
+    }
+});
+
+router.post("/enviar-orden/:id", async (req, res) => {
+    const ordenId = req.params.id;
+
+    const query = 'UPDATE ordenes SET estado = "preparando" WHERE id = ?';
+
+    try {
+        // Ejecutar la consulta usando async/await
+        const [result] = await pool.query(query, [ordenId]);
+
+        // Verificar si se actualizó algún registro
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Orden no encontrada'
             });
         }
-    );
-});*/
+
+        // Enviar respuesta con el resultado de la actualización
+        res.status(200).json({
+            success: true,
+            message: 'Orden enviada exitosamente',
+            ordenId: ordenId,
+            estado: 'preparando'
+        });
+    } catch (err) {
+        console.error(`Error al enviar orden: ${err}`);
+        res.status(500).json({
+            success: false,
+            message: 'Error al enviar orden',
+            error: err.message
+        });
+    }
+});
 
 //Ejemplo usando Socket aun no probado
 router.post("/enviar-orden/:id", (req, res) => {
@@ -81,40 +107,5 @@ router.post("/enviar-orden/:id", (req, res) => {
         }
     );
 });
-
-//Editar 
-router.put("/actualizar",(req, res)=>{
-    console.log(req.body);
-    const id = req.body.id;
-    const id_usuario = req.body.id_usuario;
-    const mesa_id = req.body.mesa_id;
-    const fecha_orden = req.body.fecha_orden;
-    const total = req.body.total;
-    db.query('UPDATE ordenes SET id_usuario=?, mesa_id=?, fecha_orden=?,total=?  WHERE id=?',
-    [id_usuario, mesa_id, fecha_orden, total, id],
-    (err, result)=>{
-        if(err){
-            console.log(`Error al actualizar orden${err}`);
-        }else{
-            res.send(`Orden actualizado! ${result}`);
-        }
-        }
-    );
-});
-
-//eliminar
-router.delete("/eliminar/:id", (req, res) => {
-    const id = req.params.id;
-        db.query('DELETE FROM ordenes WHERE id = ?', [id], (err, result) => {
-            if (err) {
-                console.log(`Orden no eliminada: ${err}`);
-                return res.status(500).send("Error al eliminar la orden");
-            } else {
-                res.send({ message: "Orden eliminada con éxito", result });
-            }
-        });
-});
-
-
 
 module.exports = router;

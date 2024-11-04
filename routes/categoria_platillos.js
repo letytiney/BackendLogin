@@ -1,33 +1,35 @@
 const express = require('express')
-const db = require('../config/db'); //importamos la bd
+const pool = require('../config/db'); //importamos la bd
 const router = express.Router();
 
-
-router.post("/guardar",(req, res)=>{
+router.post("/guardar", async (req, res) => {
     console.log(req.body);
     const nombre = req.body.nombre;
-    db.query('INSERT INTO categorias_platillos(nombre) VALUES (?)',
-    [nombre],
-    (err, result)=>{
-        if(err){
-            console.log(`Error al guardar categoria${err}`);
-        }else{
-            res.send(`Categoria guardada exitosamente ${result}`);
-        }
-        }
-    );
-});
-//listar
-router.get("/listar",(req,res)=>{
-    db.query("SELECT * FROM categorias_platillos", 
-    (err, result)=>{
-        if(err){
-            console.log(`Error al mostrar categorias de platillos${err}`);
-            }else{
-                res.send(result);
-            }	
+
+    const query = 'INSERT INTO categorias_platillos(nombre) VALUES (?)';
+
+    try {
+        // Ejecutar la consulta directamente con el pool
+        const [result] = await pool.query(query, [nombre]);
+
+        res.status(201).send(`Categoría guardada exitosamente con ID: ${result.insertId}`);
+    } catch (err) {
+        console.error(`Error al guardar categoría: ${err}`);
+        res.status(500).send("Error del servidor");
     }
-    );
+});
+
+//listar
+router.get("/listar", async (req, res) => {
+    try {
+        // Ejecutar la consulta para listar categorías
+        const [result] = await pool.query("SELECT * FROM categorias_platillos");
+        
+        res.status(200).send(result);
+    } catch (err) {
+        console.error(`Error al mostrar categorías de platillos: ${err}`);
+        res.status(500).send("Error del servidor");
+    }
 });
 
 //Editar 
