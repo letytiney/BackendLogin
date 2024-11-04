@@ -13,18 +13,23 @@ router.post("/guardar", async (req, res) => {
         const [result] = await pool.query(query, [nombre, descripcion, categoria_id, precio, imagen]);
 
         // Enviar respuesta con el resultado de la inserción
-        res.status(201).json({
+        res.status(201).send(`Platillos guardada exitosamente con ID: ${result.insertId}`);
+        /* res.status(201).json({
             success: true,
             message: `Platillo guardada exitosamente`,
             platilloId: result.insertId
-        });
+        });*/
     } catch (err) {
+        console.error(`Error al guardar Platillo: ${err}`);
+        res.status(500).send("Error del servidor");
+        /*
         console.error(`Error al guardar platillo: ${err}`);
         res.status(500).json({
             success: false,
             message: 'Error al guardar el platillo',
             error: err.message
         });
+        */
     }
 });
 
@@ -34,18 +39,25 @@ router.get("/listar", async (req, res) => {
         const [result] = await pool.query("SELECT * FROM platillos");
         
         // Enviar respuesta con los resultados
-        res.status(200).json({
+        res.status(200).send(result);
+       /* res.status(200).json({
             success: true,
             data: result,
             count: result.length
         });
+        */
     } catch (error) {
+        console.error(`Error al mostrar Listado de platillos: ${err}`);
+        res.status(500).send("Error del servidor");
+        /*
         console.error(`Error al mostrar platillos: ${error}`);
         res.status(500).json({
             success: false,
             message: 'Error al obtener la lista de platillos',
             error: error.message
         });
+        */
+
     }
 });
 
