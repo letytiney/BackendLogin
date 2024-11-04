@@ -4,49 +4,43 @@ const router = express.Router();
 
 router.get("/listar", async (req, res) => {
     try {
-        const connection = await pool.getConnection();
-
-        const [result] = await connection.query("SELECT * FROM detalles_orden");
-
+        // Ejecutar la consulta usando el pool directamente
+        const [result] = await pool.query("SELECT * FROM detalles_orden");
+        
+        // Enviar respuesta con los resultados
         res.status(200).json(result);
     } catch (err) {
-        console.log(`Error al mostrar detalle de ordenes: ${err}`);
+        console.error(`Error al mostrar detalle de ordenes: ${err}`);
         res.status(500).send('Error al mostrar detalle de ordenes');
-    }
-    finally {
-        if (connection) connection.release(); // Liberar la conexión
     }
 });
 
 router.post("/guardar", async (req, res) => {
-    const connection = await pool.getConnection(); 
     try {
-        await connection.beginTransaction();
-        
         const { orden_id, platillo_id, cantidad } = req.body;
         console.log(req.body);
 
         // Obtener precio del platillo
-        const [platilloResult] = await connection.query(
+        const [platilloResult] = await pool.query(
             'SELECT precio FROM platillos WHERE id = ?',
             [platillo_id]
         );
 
         if (platilloResult.length === 0) {
-            throw new Error('Platillo no encontrado');
+            return res.status(404).send('Platillo no encontrado');
         }
 
         const precio = platilloResult[0].precio;
         const subtotal = precio * cantidad;
 
-       // Insertar detalle de orden
-        const [detalleResult] = await connection.query(
+        // Insertar detalle de orden
+        const [detalleResult] = await pool.query(
             'INSERT INTO detalles_orden(orden_id, platillo_id, cantidad, subtotal) VALUES (?, ?, ?, ?)',
             [orden_id, platillo_id, cantidad, subtotal]
         );
 
         // Calcular nuevo total
-        const [totalResult] = await connection.query(
+        const [totalResult] = await pool.query(
             'SELECT COALESCE(SUM(subtotal), 0) as total FROM detalles_orden WHERE orden_id = ?',
             [orden_id]
         );
@@ -54,33 +48,16 @@ router.post("/guardar", async (req, res) => {
         const nuevoTotal = totalResult[0].total;
 
         // Actualizar total de la orden
-        await connection.query(
+        await pool.query(
             'UPDATE ordenes SET total = ? WHERE id = ?',
             [nuevoTotal, orden_id]
         );
 
-        await connection.commit();
-
-        res.status(201).json({
-            message: 'Detalle orden creada exitosamente',
-            detalleId: detalleResult.insertId,
-            ordenId: orden_id,
-            subtotal: subtotal,
-            nuevoTotal: nuevoTotal
-        });
-
-    } catch (error) {
-        await connection.rollback();
-        console.error('Error:', error);
-        
-        const errorMessage =
-            error.message === 'Platillo no encontrado' 
-                ? 'Platillo no encontrado' 
-                : 'Error al crear detalle orden';
-        
+        res.status(201).send(`Mesa guardada exitosamente con ID: ${result.insertId}`);
+    } 
+    catch (error) {
+        console.error(`Error al guardar mesa: ${error}`); 
         res.status(500).send(errorMessage);
-    } finally {
-        connection.release(); // Libera la conexión al pool
     }
 });
 

@@ -23,10 +23,10 @@ router.post("/create-usuario", async (req, res) => {
         const [result] = await pool.query('INSERT INTO usuarios(id_persona, rol_id, estado_id, username, password) VALUES(?, ?, ?, ?, ?)',
             [id_persona, rol_id, estado_id, username, hashedPassword]);
 
-        res.status(201).json({ message: "Usuario registrado con éxito", userId: result.insertId });
+        res.status(201).send(`Usuarios guardada exitosamente con ID: ${result.insertId}`);
     } catch (err) {
         console.error(`Error al crear usuario: ${err}`);
-        res.status(500).json({ message: "Error en el servidor", error: err.message });
+        res.status(500).send("Error del servidor");
     }
 });
 
@@ -36,18 +36,11 @@ router.get("/obteneruser", async (req, res) => {
         const [result] = await pool.query("SELECT * FROM usuarios");
         
         // Enviar respuesta con los resultados
-        res.status(200).json({
-            success: true,
-            data: result,
-            count: result.length
-        });
-    } catch (error) {
-        console.error(`Error al obtener usuarios: ${error}`);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener la lista de usuarios',
-            error: error.message
-        });
+        res.status(200).send(result);
+    } 
+    catch (error) {
+        console.error(`Error al obtener usuarios: ${err}`);
+        res.status(500).send("Error del servidor");
     }
 });
 

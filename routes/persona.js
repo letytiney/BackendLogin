@@ -21,18 +21,10 @@ router.post("/create", async (req, res) => {
         const [result] = await pool.query(query, [primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, telefono, email]);
         
         // Enviar respuesta con el resultado de la inserción
-        res.status(201).json({
-            success: true,
-            message: 'Persona creada exitosamente',
-            data: result
-        });
+        res.status(201).send(`Empleado guardada exitosamente con ID: ${result.insertId}`);
     } catch (err) {
         console.error(`Error al crear persona: ${err}`);
-        res.status(500).json({
-            success: false,
-            message: 'Error al crear la persona',
-            error: err.message
-        });
+        res.status(500).send("Error del servidor");
     }
 });
 
@@ -43,18 +35,11 @@ router.get("/obtenerlistapersonas", async (req, res) => {
         const [result] = await pool.query("SELECT * FROM PERSONA");
         
         // Enviar respuesta con los resultados
-        res.status(200).json({
-            success: true,
-            data: result,
-            count: result.length
-        });
+        res.status(200).send(result);
+
     } catch (error) {
         console.error(`Error al obtener la lista de personas: ${error}`);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener la lista de personas',
-            error: error.message
-        });
+        res.status(500).send("Error del servidor");
     }
 });
 

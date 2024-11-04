@@ -8,18 +8,11 @@ router.get("/obtenerestado", async (req, res) => {
         const [result] = await pool.query("SELECT id_estado, estado, descripcion FROM estado_usuario");
         
         // Enviar respuesta con los resultados
-        res.status(200).json({
-            success: true,
-            data: result,
-            count: result.length
-        });
+        res.status(201).send({result});
+        
     } catch (error) {
-        console.error(`Error al obtener estados: ${error}`);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener la lista de estados',
-            error: error.message
-        });
+        console.error(`Error al obtener estados: ${err}`);
+        res.status(500).send("Error del servidor");
     }
 });
 

@@ -14,14 +14,11 @@ router.post("/guardar", async (req, res) => {
             [numero, capacidad_max]
         );
         
-        res.status(201).json({ 
-            message: 'Mesa creada exitosamente', 
-            orderId: result[0].insertId 
-        });
-        
-    } catch (error) {
+        res.status(201).send(`Mesa guardada exitosamente con ID: ${result.insertId}`);
+    } 
+    catch (error) {
         console.log(`Error al guardar mesa: ${error}`);
-        res.status(500).send('Error al crear mesa');
+        res.status(500).send("Error del servidor");
     }
 });
 
@@ -32,22 +29,13 @@ router.get("/listar", async (req, res) => {
         const [result] = await pool.query("SELECT * FROM mesas");
         
         // Respuesta estructurada en formato JSON
-        res.status(200).json({
-            success: true,
-            data: result,
-            count: result.length
-        });
+        res.status(200).send(result);
 
     } catch (error) {
         console.error(`Error al mostrar mesas: ${error}`);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener las mesas',
-            error: error.message
-        });
+        res.status(500).send("Error del servidor");
     }
 });
-
 
 //Editar
 router.put("/actualizar", async (req, res) => {

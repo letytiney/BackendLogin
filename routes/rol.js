@@ -8,18 +8,10 @@ router.get("/obtenerrol", async (req, res) => {
         const [result] = await pool.query("SELECT id_rol, nombre FROM rol");
         
         // Enviar respuesta con los resultados
-        res.status(200).json({
-            success: true,
-            data: result,
-            count: result.length
-        });
+        res.status(200).send(result);
     } catch (error) {
-        console.error(`Error al obtener roles: ${error}`);
-        res.status(500).json({
-            success: false,
-            message: 'Error al obtener la lista de roles',
-            error: error.message
-        });
+        console.error(`Error al obtener roles: ${err}`);
+        res.status(500).send("Error del servidor");
     }
 });
 

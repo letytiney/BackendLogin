@@ -2,7 +2,6 @@ const express = require('express')
 const pool = require('../config/db'); //importamos la bd
 const router = express.Router();
 
-
 router.get("/listar", async (req, res) => {
     try {
         // Ejecutamos la consulta usando async/await
@@ -12,11 +11,7 @@ router.get("/listar", async (req, res) => {
         res.status(200).json(result);
     } catch (error) {
         console.error(`Error al mostrar órdenes: ${error}`);
-        res.status(500).json({
-            success: false,
-            message: 'Error al mostrar órdenes',
-            error: error.message
-        });
+        res.status(500).send("Error del servidor");
     }
 });
 
@@ -33,17 +28,10 @@ router.post("/guardar", async (req, res) => {
         const [result] = await pool.query(query, [id_usuario, mesa_id, total, estado]);
         
         // Enviar respuesta con el resultado de la inserción
-        res.status(201).json({ 
-            message: 'Orden creada exitosamente', 
-            orderId: result.insertId 
-        });
+        res.status(201).send(`Orden guardada exitosamente con ID: ${result.insertId}`);
     } catch (err) {
         console.error(`Error al crear orden: ${err}`);
-        res.status(500).json({
-            success: false,
-            message: 'Error al crear orden',
-            error: err.message
-        });
+        res.status(500).send("Error del servidor");
     }
 });
 
