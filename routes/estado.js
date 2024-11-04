@@ -8,7 +8,7 @@ router.get("/obtenerestado", async (req, res) => {
         const [result] = await pool.query("SELECT id_estado, estado, descripcion FROM estado_usuario");
         
         // Enviar respuesta con los resultados
-        res.status(201).send({result});
+        res.status(200).send(result);
         
     } catch (error) {
         console.error(`Error al obtener estados: ${err}`);
