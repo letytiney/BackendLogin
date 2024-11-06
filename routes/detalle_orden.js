@@ -52,12 +52,11 @@ router.post("/guardar", async (req, res) => {
             'UPDATE ordenes SET total = ? WHERE id = ?',
             [nuevoTotal, orden_id]
         );
-
-        res.status(201).send(`Mesa guardada exitosamente con ID: ${detalleResult.insertId}`);
+        res.status(201).send(`Detalle orden guardada exitosamente con ID: ${detalleResult.insertId}`);
     } 
     catch (error) {
-        console.error(`Error al guardar mesa: ${error}`); 
-        res.status(500).send("Error al guardar detalle");
+        console.error(`Error al guardar detalle orden: ${error}`); 
+        res.status(500).send("Error al guardar detalle orden");
     }
 });
 
