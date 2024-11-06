@@ -62,6 +62,65 @@ router.post("/enviar-orden/:id", async (req, res) => {
     }
 });
 
+
+// Obtener órdenes en estado "Preparando" con detalles de cada platillo
+router.get("/ordenes-preparando", async (req, res) => {
+    try {
+        const query = `
+            SELECT o.id AS ordenId, o.id_usuario, o.mesa_id, o.fecha_orden, o.total, o.estado,
+                d.id AS detalleId, d.platillo_id, d.cantidad, d.subtotal,
+                p.nombre AS nombrePlatillo
+            FROM ordenes o
+            JOIN detalles_orden d ON o.id = d.orden_id
+            JOIN platillos p ON d.platillo_id = p.id
+            WHERE o.estado = 'preparando'
+            ORDER BY o.id, d.id;
+        `;
+
+        const [result] = await pool.query(query);
+
+        // Reestructurar los datos para agrupar los detalles de cada orden
+        const ordenes = result.reduce((acc, row) => {
+            let orden = acc.find(o => o.ordenId === row.ordenId);
+            if (!orden) {
+                orden = {
+                    ordenId: row.ordenId,
+                    usuarioId: row.id_usuario,
+                    mesaId: row.mesa_id,
+                    fechaOrden: row.fecha_orden,
+                    total: row.total,
+                    estado: row.estado,
+                    items: []
+                };
+                acc.push(orden);
+            }
+
+            orden.items.push({
+                detalleId: row.detalleId,
+                platilloId: row.platillo_id,
+                nombre: row.nombrePlatillo,
+                cantidad: row.cantidad,
+                subtotal: row.subtotal
+            });
+
+            return acc;
+        }, []);
+
+        res.status(200).json({
+            success: true,
+            ordenes
+        });
+    } catch (error) {
+        console.error("Error al obtener órdenes en estado 'Preparando':", error);
+        res.status(500).json({
+            success: false,
+            message: "Error al obtener órdenes",
+            error: error.message
+        });
+    }
+});
+
+
 //Ejemplo usando Socket aun no probado
 /*
 router.post("/enviar-orden/:id", (req, res) => {

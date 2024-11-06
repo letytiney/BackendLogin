@@ -53,7 +53,7 @@ router.post("/guardar", async (req, res) => {
             [nuevoTotal, orden_id]
         );
 
-        res.status(201).send(`Mesa guardada exitosamente con ID: ${result.insertId}`);
+        res.status(201).send(`Mesa guardada exitosamente con ID: ${detalleResult.insertId}`);
     } 
     catch (error) {
         console.error(`Error al guardar mesa: ${error}`); 
@@ -125,17 +125,19 @@ router.put("/actualizar/:id", async (req, res) => {
     }
 });
 
-//Eliminar detalle_orden
-router.delete("/eliminar/:id", async (req, res) => {
-    const id = req.params.id;
-    
+// Eliminar detalle_orden
+router.delete("/eliminar/:ordenId/:platilloId", async (req, res) => {
+    const ordenId = req.params.ordenId; // id de la orden
+    const platilloId = req.params.platilloId; // id del platillo a eliminar
+
     try {
-        // 1. Obtener el orden_id antes de eliminar
+        // 1. Obtener el detalle del platillo antes de eliminar
         const [detalleResult] = await pool.query(
-            'SELECT orden_id FROM detalles_orden WHERE id = ?',
-            [id]
+            'SELECT id FROM detalles_orden WHERE orden_id = ? AND platillo_id = ?',
+            [ordenId, platilloId]
         );
 
+        // Verificar que se encontró el detalle
         if (!detalleResult || detalleResult.length === 0) {
             return res.status(404).json({
                 success: false,
@@ -143,18 +145,18 @@ router.delete("/eliminar/:id", async (req, res) => {
             });
         }
 
-        const orden_id = detalleResult[0].orden_id;
+        const detalleId = detalleResult[0].id; // id del detalle encontrado
 
         // 2. Eliminar el detalle
         await pool.query(
             'DELETE FROM detalles_orden WHERE id = ?',
-            [id]
+            [detalleId]
         );
 
         // 3. Recalcular el total
         const [totalResult] = await pool.query(
             'SELECT COALESCE(SUM(subtotal), 0) as total FROM detalles_orden WHERE orden_id = ?',
-            [orden_id]
+            [ordenId]
         );
 
         const nuevoTotal = totalResult[0].total;
@@ -162,7 +164,7 @@ router.delete("/eliminar/:id", async (req, res) => {
         // 4. Actualizar el total en la orden
         await pool.query(
             'UPDATE ordenes SET total = ? WHERE id = ?',
-            [nuevoTotal, orden_id]
+            [nuevoTotal, ordenId]
         );
 
         // 5. Enviar respuesta exitosa
@@ -170,8 +172,8 @@ router.delete("/eliminar/:id", async (req, res) => {
             success: true,
             message: "Detalle de orden eliminado con éxito",
             data: {
-                detalleId: id,
-                ordenId: orden_id,
+                detalleId: detalleId,
+                ordenId: ordenId,
                 nuevoTotal: nuevoTotal
             }
         });
