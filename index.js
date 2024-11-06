@@ -11,6 +11,7 @@ const rolRoutes = require('./routes/rol.js');
 const estadoRoutes = require('./routes/estado.js');
 const personaRoutes = require('./routes/persona.js');
 const autorizacion = require('./routes/auth.js');
+const facturaRoutes = require('./routes/factura.js');
 require('dotenv').config();
 const app = express();
 const http = require('http'); 
@@ -67,6 +68,7 @@ app.use('/platillos', platillosRoutes);
 app.use('/mesas', mesaRoutes);
 app.use('/orden', ordenRoutes);
 app.use('/detalle_orden', detalleOrdenRoutes);
+app.use('/factura', facturaRoutes)
 
 app.listen(PORT, () => {
     console.log(`Servidor escuchando en http://localhost:${PORT}`);
