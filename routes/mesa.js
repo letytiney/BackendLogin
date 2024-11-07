@@ -50,12 +50,12 @@ router.put("/actualizar", async (req, res) => {
 
         // Verificar si se actualizó algún registro
         if (result.affectedRows === 0) {
-            return res.status(404).send('Categoría no encontrada');
+            return res.status(404).send('Mesa no encontrada');
  
         }
 
         // Enviar respuesta con el resultado de la actualización
-        res.status(200).send(`Categoría actualizada exitosamente con ID: ${result.insertId}`);
+        res.status(200).send(`Mesa actualizada exitosamente con ID: ${result.insertId}`);
   
     } catch (err) {
         console.error(`Error al actualizar mesa: ${err}`);
