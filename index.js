@@ -13,6 +13,8 @@ const personaRoutes = require('./routes/persona.js');
 const autorizacion = require('./routes/auth.js');
 const facturaRoutes = require('./routes/factura.js');
 const clientesRoutes = require('./routes/clientes.js');
+const reporteRoutes = require('./routes/reporte.js')
+
 require('dotenv').config();
 const app = express();
 const http = require('http'); 
@@ -71,6 +73,7 @@ app.use('/orden', ordenRoutes);
 app.use('/detalle_orden', detalleOrdenRoutes);
 app.use('/factura', facturaRoutes)
 app.use('/cliente', clientesRoutes)
+app.use('/reporte', reporteRoutes)
 
 
 app.listen(PORT, () => {

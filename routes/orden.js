@@ -373,10 +373,12 @@ router.get("/ordenes-entregados", async (req, res) => {
         const query = `
             SELECT o.id AS ordenId, o.id_usuario, o.mesa_id, o.fecha_orden, o.total, o.estado,
                 d.id AS detalleId, d.platillo_id, d.cantidad, d.subtotal,
-                p.nombre AS nombrePlatillo
+                p.nombre AS nombrePlatillo,
+                u.nombre AS nombreMesero
             FROM ordenes o
             JOIN detalles_orden d ON o.id = d.orden_id
             JOIN platillos p ON d.platillo_id = p.id
+            JOIN usuarios u ON o.id_usuario = u.id
             WHERE o.estado = 'entregado'
             ORDER BY o.id, d.id;
         `;
@@ -394,6 +396,7 @@ router.get("/ordenes-entregados", async (req, res) => {
                     fechaOrden: row.fecha_orden,
                     total: row.total,
                     estado: row.estado,
+                    nombreMesero: row.nombreMesero, 
                     items: []
                 };
                 acc.push(orden);
@@ -423,5 +426,6 @@ router.get("/ordenes-entregados", async (req, res) => {
         });
     }
 });
+
 
 module.exports = router;
