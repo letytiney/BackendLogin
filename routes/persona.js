@@ -32,7 +32,7 @@ router.post("/create", async (req, res) => {
 router.get("/obtenerlistapersonas", async (req, res) => {
     try {
         // Ejecutamos la consulta usando async/await
-        const [result] = await pool.query("SELECT * FROM PERSONA");
+        const [result] = await pool.query("SELECT * FROM persona");
         
         // Enviar respuesta con los resultados
         res.status(200).send(result);
