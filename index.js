@@ -2,9 +2,11 @@ const express = require('express');
 const cors = require("cors");
 const { expressjwt: expressJwt } = require("express-jwt");
 const http = require('http'); 
+const socketIo = require('socket.io');
 require('dotenv').config();
 const app = express();
 const server = http.createServer(app); 
+const io = socketIo(server);
 const roleMiddleware = require('./middleware/roleMiddleware');
 
 app.use(cors({
@@ -72,3 +74,13 @@ server.listen(process.env.PORT || 3001, () => {
     console.log(`Servidor escuchando en ${process.env.LOCAL}:${process.env.PORT || 3001}`);
 });
 
+
+io.on('connection', (socket) => {
+    console.log('Nuevo cliente conectado');
+
+    // Manejar eventos aquí
+
+    socket.on('disconnect', () => {
+        console.log('Cliente desconectado');
+    });
+});
