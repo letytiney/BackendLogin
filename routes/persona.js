@@ -43,6 +43,22 @@ router.get("/obtenerlistapersonas", async (req, res) => {
     }
 });
 
+router.get("/obtenerpersona", async (req, res) => {
+    try {
+        const [result] = await pool.query(`
+            SELECT p.*
+            FROM persona p
+            LEFT JOIN usuarios u ON p.id = u.id_persona
+            WHERE u.id_usuario IS NULL
+        `);
+        
+        res.send(result);
+    } catch (err) {
+        console.error(`Error al obtener personas: ${err}`);
+        res.status(500).send("Error al obtener personas");
+    }
+});
+
 //Update
 router.put("/update", async (req, res) => {
     console.log(req.body);

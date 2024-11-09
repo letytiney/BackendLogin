@@ -35,121 +35,6 @@ router.post("/guardar", async (req, res) => {
     }
 });
 
-
-/*
-
-router.post("/enviar-orden/:id", async (req, res) => {
-    const ordenId = req.params.id;
-
-    const query = 'UPDATE ordenes SET estado = "preparando" WHERE id = ?';
-
-    try {
-        // Ejecutar la consulta usando async/await
-        const [result] = await pool.query(query, [ordenId]);
-
-        // Verificar si se actualizó algún registro
-        if (result.affectedRows === 0) {
-            return res.status(404).send('Orden no encontrada');
-        }
-
-        // Enviar respuesta con el resultado de la actualización
-        res.status(200).json({
-            success: true,
-            message: 'Orden enviada exitosamente',
-            ordenId: ordenId,
-            estado: 'preparando'
-        });
-    } catch (err) {
-        console.error(`Error al enviar orden: ${err}`);
-        res.status(500).send("Error al enviar orden");
-    }
-});
-
-
-router.post("/responder-orden/:id", async (req, res) => {
-    const ordenId = req.params.id;
-
-    const query = 'UPDATE ordenes SET estado = "listo" WHERE id = ?';
-
-    try {
-        // Ejecutar la consulta usando async/await
-        const [result] = await pool.query(query, [ordenId]);
-
-        // Verificar si se actualizó algún registro
-        if (result.affectedRows === 0) {
-            return res.status(404).send('Orden no encontrada');
-        }
-
-        // Enviar respuesta con el resultado de la actualización
-        res.status(200).json({
-            success: true,
-            message: 'Orden enviada exitosamente',
-            ordenId: ordenId,
-            estado: 'listo'
-        });
-    } catch (err) {
-        console.error(`Error al responedr orden: ${err}`);
-        res.status(500).send("Error al  orden");
-    }
-});
-
-router.post("/entregar-orden/:id", async (req, res) => {
-    const ordenId = req.params.id;
-
-    const query = 'UPDATE ordenes SET estado = "entregado" WHERE id = ?';
-
-    try {
-        // Ejecutar la consulta usando async/await
-        const [result] = await pool.query(query, [ordenId]);
-
-        // Verificar si se actualizó algún registro
-        if (result.affectedRows === 0) {
-            return res.status(404).send('Orden no encontrada');
-        }
-
-        // Enviar respuesta con el resultado de la actualización
-        res.status(200).json({
-            success: true,
-            message: 'Orden enviada exitosamente',
-            ordenId: ordenId,
-            estado: 'entregado'
-        });
-    } catch (err) {
-        console.error(`Error al responedr orden: ${err}`);
-        res.status(500).send("Error al  orden");
-    }
-});
-*/
-
-
-//Ejemplo usando Socket aun no probado
-/*
-router.post("/enviar-orden/:id", (req, res) => {
-    const ordenId = req.params.id;
-    db.query(
-        'UPDATE ordenes SET estado = "preparando" WHERE id = ?',
-        [ordenId],
-        (err, result) => {
-            if (err) {
-                console.log(`Error al enviar orden: ${err}`);
-                return res.status(500).send('Error al enviar orden');
-            }
-
-            // Emitir evento a los clientes conectados
-            io.emit('ordenActualizada', {
-                ordenId: ordenId,
-                estado: 'preparando'
-            });
-
-            res.status(200).json({
-                message: 'Orden enviada exitosamente',
-                ordenId: ordenId,
-                estado: 'preparando'
-            });
-        }
-    );
-});
-*/
 /*Orden resperada */
 
 router.post("/enviar-orden/:id", async (req, res) => {
@@ -184,8 +69,6 @@ router.post("/enviar-orden/:id", async (req, res) => {
         res.status(500).send("Error al enviar orden");
     }
 });
-
-
 
 // Obtener órdenes en estado "Preparando" con detalles de cada platillo
 router.get("/ordenes-preparando", async (req, res) => {
@@ -427,5 +310,66 @@ router.get("/ordenes-entregados", async (req, res) => {
     }
 });
 
+// Obtener órdenes en estado "Entregado" filtradas por usuario
+router.get("/ordenes-entregados/:usuarioId", async (req, res) => {
+    const usuarioId = req.params.usuarioId;
+
+    try {
+        const query = `
+        SELECT o.id AS ordenId, o.id_usuario AS usuarioId, o.mesa_id, o.fecha_orden, o.total, o.estado,
+            d.id AS detalleId, d.platillo_id, d.cantidad, d.subtotal,
+            p.nombre AS nombrePlatillo,
+            u.username AS nombreMesero
+        FROM ordenes o
+        JOIN detalles_orden d ON o.id = d.orden_id
+        JOIN platillos p ON d.platillo_id = p.id
+        JOIN usuarios u ON o.id_usuario = u.id_usuario
+        WHERE o.estado = 'entregado' AND o.id_usuario = ?
+        ORDER BY o.id, d.id;
+    `;
+
+        const [result] = await pool.query(query, [usuarioId]);
+
+        // Reestructurar los datos para agrupar los detalles de cada orden
+        const ordenes = result.reduce((acc, row) => {
+            let orden = acc.find(o => o.ordenId === row.ordenId);
+            if (!orden) {
+                orden = {
+                    ordenId: row.ordenId,
+                    usuarioId: row.id_usuario,
+                    mesaId: row.mesa_id,
+                    fechaOrden: row.fecha_orden,
+                    total: row.total,
+                    estado: row.estado,
+                    nombreMesero: row.nombreMesero, 
+                    items: []
+                };
+                acc.push(orden);
+            }
+
+            orden.items.push({
+                detalleId: row.detalleId,
+                platilloId: row.platillo_id,
+                nombre: row.nombrePlatillo,
+                cantidad: row.cantidad,
+                subtotal: row.subtotal
+            });
+
+            return acc;
+        }, []);
+
+        res.status(200).json({
+            success: true,
+            ordenes
+        });
+    } catch (error) {
+        console.error("Error al obtener órdenes en estado 'Entregado':", error);
+        res.status(500).json({
+            success: false,
+            message: "Error al obtener órdenes",
+            error: error.message
+        });
+    }
+});
 
 module.exports = router;
