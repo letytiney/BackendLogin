@@ -8,7 +8,7 @@ const app = express();
 const server = http.createServer(app); 
 const io = socketIo(server);
 const roleMiddleware = require('./middleware/roleMiddleware');
-
+    
 app.use(cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
